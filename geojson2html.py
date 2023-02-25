@@ -1,7 +1,6 @@
 # -*- encoding utf-8 -*-
 
 import sys, os
-import json
 
 #==============================================
 #
@@ -94,6 +93,7 @@ def polygon2polygon(poly):
 
 if __name__ == "__main__":
 	import requests
+	import json
 
 	def getGeoJsonChina():
 		url = "https://geojson.cn/api/data/china.json"

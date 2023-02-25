@@ -29,11 +29,6 @@ The output HTML is the following.
 </svg>
 ```
 
-## Validation
-```
-json >= 2.0.0
-```
-
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first
