@@ -14,7 +14,8 @@ geo = ...
 svgHTML = geojson2html(geo, key="Alaska")
 
 # render all the properties in GeoJson
-svgHTML = geojson2html(geo, key="Alaska")
+# not set `key`
+svgHTML = geojson2html(geo)
 ```
 
 The output HTML is the following.
