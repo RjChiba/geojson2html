@@ -36,6 +36,10 @@ to discuss what you would like to change.
 
 Please make sure to update tests as appropriate.
 
+## See More
+
+Qiita : [GeoJson を HTML に変換したい](https://qiita.com/RjChiba/items/5da96d3e4912d115344d)
+
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
@@ -43,4 +47,4 @@ Please make sure to update tests as appropriate.
 ## Contacts/Information
 [Twitter (@rj_phys)](https://www.twitter.com/rj_phys)
 
-[Author WebSite](https://rjchiba.vercel.app)
+[Author's WebSite](https://rjchiba.vercel.app)
