@@ -16,7 +16,7 @@ class Polygon:
 
 
 def geojson2html(geo, key=None):
-	svghtml = "<svg viewbox=\"#viewbox\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n#polygon</svg>"
+	svghtml = "<svg viewbox=\"#viewbox\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" style=\"transform: scale(1,-1);\">\n#polygon</svg>"
 	polygonhtml = ""
 	vb = [0,1e10,1e10,0]
 

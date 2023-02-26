@@ -5,7 +5,7 @@ geojson2html is a Python codes for rendering GeoJson to HTML (svg polygon)
 ## Usage
 
 ```python
-import geojson2html
+from geojson2html import geojson2html
 
 # plz prepare GeoJson 
 geo = ...
