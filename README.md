@@ -11,22 +11,24 @@ from geojson2html import geojson2html
 geo = ...
 
 # render properties named "Alaska" in GeoJson
-svgHTML = geojson2html(geo, key="Alaska")
+html = geojson2html(geo, key="Alaska")
 
 # render all the properties in GeoJson
 # not set `key`
-svgHTML = geojson2html(geo)
+html = geojson2html(geo)
 ```
 
 The output HTML is the following.
 
 ```html
+...
 <svg viewbox="{viewbox}" version="1.1" xmlns="http://www.w3.org/2000/svg">
-<polygon id="{name}" points="{corrdinates}">
+<path id="{name}" points="{corrdinates}">
 <title>{name/fullname}</title>
-</polygon>
+</path>
 ...
 </svg>
+...
 ```
 
 ## Contributing

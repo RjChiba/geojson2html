@@ -49,7 +49,7 @@ def polygon2Path(dtype, mpoly):
 	return path
 
 
-def geojson2html_v2(geo, key=None):
+def geojson2html(geo, key=None):
 	svghtml = "<svg viewbox=\"#viewbox\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" style=\"transform: scale(1,-1);\">\n#polygon</svg>"
 	polygonhtml = ""
 	vb = [0,1e10,1e10,0]
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 		return geo
 
 	geo = getGeoJsonChina()
-	html = html.replace("#svg", geojson2html_v2(geo))
+	html = html.replace("#svg", geojson2html(geo))
 	fp = "./geo.html"
 	
 	with open(fp, 'w') as f:
