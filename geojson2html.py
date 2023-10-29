@@ -1,31 +1,59 @@
 # -*- encoding utf-8 -*-
 
 import sys, os
+import traceback
 
-#==============================================
+#=== NOTICE ===========================================================
 #
-# key : `name` property of `features` to draw
-#       not set -> draw all the features
-#
-#==============================================
+# The geographical data of Japan was kindly provided by japonyol.net
+# https://japonyol.net/editor/article/47-prefectures-geojson.html
+# 
+#======================================================================
 
 class Path:
 	def __init__(self, position, viewbox):
 		self.path = position
 		self.box = viewbox
 
-def updateViewbox(box, p:Path):
-	posH = max(box[0], p.box[0])
-	posB = min(box[1], p.box[1])
-	posL = min(box[2], p.box[2])
-	posR = max(box[3], p.box[3])
-	box = [posH,posB,posL,posR]
+class Viewbox:
+	def __init__(self, top=0, bottom=float('inf'), left=float('inf'), right=0):
+		self.pos_top = top
+		self.pos_bottom = bottom
+		self.pos_left = left
+		self.pos_right = right
 
-	return box
+	def shape(self):
+		return [
+			self.pos_left, self.pos_bottom, self.pos_right - self.pos_left, self.pos_top - self.pos_bottom
+		]
+
+def updateViewbox(box1, box2):
+
+	if type(box1) == Viewbox and type(box2) == Viewbox:
+		posT = max(box1.pos_top    , box2.pos_top)
+		posB = min(box1.pos_bottom , box2.pos_bottom)
+		posL = min(box1.pos_left   , box2.pos_left)
+		posR = max(box1.pos_right  , box2.pos_right)
+
+		return Viewbox(posT,posB,posL,posR)
+
+	if type(box1) == list and type(box2) == list:
+		posT = max(box1[0], box2[0])
+		posB = min(box1[1], box2[1])
+		posL = min(box1[2], box2[2])
+		posR = max(box1[3], box2[3])
+
+		return Viewbox(posT,posB,posL,posR)
+
+	if type(box1) == Viewbox and type(box2) == list:
+		return updateViewbox([box1.pos_top,box1.pos_bottom,box1.pos_left,box1.pos_right], box2)
+
+	if type(box1) == list and type(box2) == Viewbox:
+		return updateViewbox(box1, [box2.pos_top,box2.pos_bottom,box2.pos_left,box2.pos_right])
 
 
 def polygon2Path(dtype, mpoly):
-	posH, posB, posL, posR = 0,1e10,1e10,0
+	VB = Viewbox()
 	pathstr = ""
 
 	if dtype == "Polygon":
@@ -37,14 +65,9 @@ def polygon2Path(dtype, mpoly):
 
 			for pos in poly[1:]:
 				pathstr += f" L {pos[0]},{pos[1]}"
-				posH = max(posH, pos[1])
-				posB = min(posB, pos[1])
-				posL = min(posL, pos[0])
-				posR = max(posR, pos[0])
-
-	viewbox = [posH,posB,posL,posR]
+				VB = updateViewbox(VB, [pos[1],pos[1],pos[0],pos[0]])
 	
-	path = Path(pathstr, viewbox)
+	path = Path(pathstr, VB)
 
 	return path
 
@@ -52,56 +75,62 @@ def polygon2Path(dtype, mpoly):
 def geojson2html(geo, key=None):
 	svghtml = "<svg viewbox=\"#viewbox\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" style=\"transform: scale(1,-1);\">\n#polygon</svg>"
 	polygonhtml = ""
-	vb = [0,1e10,1e10,0]
+	VB = Viewbox()
 
 	for feature in geo.get("features",[]):
 		
-		# get objects
+		# get properties
 		props = feature.get("properties", {})
-		name = props.get("name", "")
-		fullname = props.get("fullname",name)
+		prop_name = props.get("name", "")
+		prop_fullname = props.get("fullname",prop_name)
 
-		if key != None and name not in key:
+		if key != None and prop_name not in key:
 			continue
 
+		# get geometries
 		geo = feature.get("geometry",{})
-		geocors = geo.get("coordinates",[])
+		geo_cors = geo.get("coordinates",[])
+		geo_dtype = geo.get("type", None)
 
-		dtype = geo.get("type", None)
-
-		if dtype != "Polygon" and dtype != "MultiPolygon":
-			print(f"Ops! {dtype} can not be handled!")
+		if geo_dtype != "Polygon" and geo_dtype != "MultiPolygon":
+			print(f"Ops! {geo_dtype} can not be handled so far!")
 			continue
 
-		p = polygon2Path(dtype, geocors)
+		PATH = polygon2Path(geo_dtype, geo_cors)
 
-		vb = updateViewbox(vb, p)
+		VB = updateViewbox(VB, PATH.box)
 
-		polygonhtml += f"<path id=\"{fullname}\" d=\"{p.path}\"><title>{fullname}</title></path>\n"
+		polygonhtml += f"<path id=\"{prop_fullname}\" d=\"{PATH.path}\"><title>{prop_fullname}</title></path>\n"
 
-	svghtml = svghtml.replace("#viewbox", f"{vb[2]} {vb[1]} {vb[3]-vb[2]} {vb[0]-vb[1]}")
+	svghtml = svghtml.replace("#viewbox", " ".join(map(str, VB.shape())))
 	svghtml = svghtml.replace("#polygon", polygonhtml)
 
 	return svghtml
 
 if __name__ == "__main__":
-	import requests
 	import json
 
-	html = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Document</title></head><style>svg {height: 80vh;margin: 0 10vw;border: 1px solid black;}path,polygon {fill: white;stroke: black;stroke-width: 0.01;}path:hover,polygon:hover {fill: black;transition: 0.5s;}</style><body>#svg</body></html>"
+	html = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Document</title></head><style>#style</style><body>#svg</body></html>"
+	style = """
+		svg {
+			height: 80vh;
+			margin: 0 10vw;
+			border: 1px solid black;
+		}
+		path,polygon {fill: white;
+			stroke: black;
+			stroke-width: 0.01;
+		}
+		path:hover,polygon:hover {
+			fill: black;
+			transition: 0.5s;
+		}"""
 
-	def getGeoJsonChina():
-		url = "https://geojson.cn/api/data/china.json"
-		res = requests.get(url)
+	with open("./japan.json", "r", encoding="utf-8") as f:
+		geo = json.load(f)
 
-		if res.status_code == 200:
-			geo = json.loads(res.content)
-
-		return geo
-
-	geo = getGeoJsonChina()
 	html = html.replace("#svg", geojson2html(geo))
-	fp = "./geo.html"
+	html = html.replace("#style", style)
 	
-	with open(fp, 'w') as f:
+	with open("./geo.html", 'w', encoding="utf-8") as f:
 		f.write(html)
