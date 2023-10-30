@@ -51,6 +51,32 @@ def updateViewbox(box1, box2):
 	if type(box1) == list and type(box2) == Viewbox:
 		return updateViewbox(box1, [box2.pos_top,box2.pos_bottom,box2.pos_left,box2.pos_right])
 
+def pathGenerate(polygon, VB, stroke="line"):
+	path = ""
+
+	if stroke == "line":
+
+		for (i,position) in enumerate(polygon):
+			if i == 0:
+				ctrl = "M"
+			else:
+				ctrl = "L"
+
+			path += f" {ctrl} {position[0]},{position[1]}"
+
+			VB = updateViewbox(VB, [position[1],position[1],position[0],position[0]])
+
+		return path, VB
+
+	if stroke == "bezier":
+		for (i,position) in enumerate(polygon):
+			if i == 0:
+				path += f" M {position[0]},{position[1]}"
+
+			else:
+				pass
+			
+		return path, VB
 
 def polygon2Path(dtype, mpoly):
 	VB = Viewbox()
@@ -61,19 +87,16 @@ def polygon2Path(dtype, mpoly):
 	
 	for i in range(len(mpoly)):
 		for poly in mpoly[i]:
-			pathstr += f"M {poly[0][0]},{poly[0][1]}"
 
-			for pos in poly[1:]:
-				pathstr += f" L {pos[0]},{pos[1]}"
-				VB = updateViewbox(VB, [pos[1],pos[1],pos[0],pos[0]])
+			tpath, VB = pathGenerate(poly, VB)
+			pathstr += tpath
 	
 	path = Path(pathstr, VB)
 
 	return path
 
-
 def geojson2html(geo, key=None):
-	svghtml = "<svg viewbox=\"#viewbox\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" style=\"transform: scale(1,-1);\">\n#polygon</svg>"
+	svghtml = "<svg viewbox=\"#viewbox\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" \">\n#polygon</svg>"
 	polygonhtml = ""
 	VB = Viewbox()
 
@@ -84,6 +107,7 @@ def geojson2html(geo, key=None):
 		prop_name = props.get("name", "")
 		prop_fullname = props.get("fullname",prop_name)
 
+		# skip not-specified
 		if key != None and prop_name not in key:
 			continue
 
@@ -92,7 +116,7 @@ def geojson2html(geo, key=None):
 		geo_cors = geo.get("coordinates",[])
 		geo_dtype = geo.get("type", None)
 
-		if geo_dtype != "Polygon" and geo_dtype != "MultiPolygon":
+		if geo_dtype not in ["Polygon","MultiPolygon"]:
 			print(f"Ops! {geo_dtype} can not be handled so far!")
 			continue
 
@@ -113,6 +137,7 @@ if __name__ == "__main__":
 	html = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Document</title></head><style>#style</style><body>#svg</body></html>"
 	style = """
 		svg {
+			transform: scale(1,-1);
 			height: 80vh;
 			margin: 0 10vw;
 			border: 1px solid black;
