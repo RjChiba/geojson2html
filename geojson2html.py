@@ -71,12 +71,15 @@ def pathGenerate(polygon, VB, stroke="line"):
 	if stroke == "bezier":
 		for (i,position) in enumerate(polygon):
 			if i == 0:
-				path += f" M {position[0]},{position[1]}"
-
-			else:
-				pass
+				path += f" M {position[0]},{position[1]} C #beizer_point"
+  #todo need check 
+			elif i == 1:
+				path += f", #baizer_point {position[0]},{position[1]}"
 			
-		return path, VB
+			else:
+				path += f"S #baizer_point {position[0]},{position[1]}"
+			
+		'return path, VB
 
 def polygon2Path(dtype, mpoly):
 	VB = Viewbox()
