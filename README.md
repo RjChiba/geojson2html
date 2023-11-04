@@ -38,8 +38,10 @@ The output HTML has the followin format:
 ...
 ```
 
-## Contributing
+## Use case
+[開拓団入植地 - 満洲開拓資料館](https://mus-manchuria.com/ja/document/)
 
+## Contributing
 Pull requests are welcome. For major changes, please open an issue first
 to discuss what you would like to change.
 
