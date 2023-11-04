@@ -51,7 +51,7 @@ def updateViewbox(box1, box2):
 	if type(box1) == list and type(box2) == Viewbox:
 		return updateViewbox(box1, [box2.pos_top,box2.pos_bottom,box2.pos_left,box2.pos_right])
 
-def pathGenerate(polygon, VB, stroke="line"):
+def pathGenerate(polygon, VB, stroke):
 	path = ""
 
 	if stroke == "line":
@@ -68,20 +68,32 @@ def pathGenerate(polygon, VB, stroke="line"):
 
 		return path, VB
 
-	if stroke == "bezier":
+	if stroke == "beizer":
 		for (i,position) in enumerate(polygon):
+			ip = (i+1)%len(polygon)
+			ib = (i-1)%len(polygon)
+
+			beizer_ref = [
+				polygon[ip][0] - polygon[ib][0], polygon[ip][1] - polygon[ib][1]
+			]
+			L2norm = (beizer_ref[0]**2 + beizer_ref[1]**2)**0.5
+			beizer_ref = [x * L2norm for x in beizer_ref]
+			beizer_point = [ - x + y for (x,y) in zip(beizer_ref, position)]
+
 			if i == 0:
-				path += f" M {position[0]},{position[1]} C #beizer_point"
-  #todo need check 
+				path += f" M {position[0]},{position[1]} C {beizer_point[0]},{beizer_point[1]}"
+
 			elif i == 1:
-				path += f", #baizer_point {position[0]},{position[1]}"
+				path += f", {beizer_point[0]},{beizer_point[1]} {position[0]},{position[1]}"
 			
 			else:
-				path += f"S #baizer_point {position[0]},{position[1]}"
-			
-		'return path, VB
+				path += f" S {beizer_point[0]},{beizer_point[1]} {position[0]},{position[1]}"
 
-def polygon2Path(dtype, mpoly):
+			VB = updateViewbox(VB, [position[1],position[1],position[0],position[0]])
+			
+		return path, VB
+
+def polygon2Path(dtype, mpoly, stroke):
 	VB = Viewbox()
 	pathstr = ""
 
@@ -91,15 +103,15 @@ def polygon2Path(dtype, mpoly):
 	for i in range(len(mpoly)):
 		for poly in mpoly[i]:
 
-			tpath, VB = pathGenerate(poly, VB)
+			tpath, VB = pathGenerate(poly, VB, stroke)
 			pathstr += tpath
 	
 	path = Path(pathstr, VB)
 
 	return path
 
-def geojson2html(geo, key=None):
-	svghtml = "<svg viewbox=\"#viewbox\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" \">\n#polygon</svg>"
+def geojson2html(geo, key=None, stroke="line"):
+	svghtml = "<svg viewbox=\"#viewbox\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n#polygon</svg>"
 	polygonhtml = ""
 	VB = Viewbox()
 
@@ -123,7 +135,7 @@ def geojson2html(geo, key=None):
 			print(f"Ops! {geo_dtype} can not be handled so far!")
 			continue
 
-		PATH = polygon2Path(geo_dtype, geo_cors)
+		PATH = polygon2Path(geo_dtype, geo_cors, stroke)
 
 		VB = updateViewbox(VB, PATH.box)
 
@@ -147,18 +159,18 @@ if __name__ == "__main__":
 		}
 		path,polygon {fill: white;
 			stroke: black;
-			stroke-width: 0.01;
+			stroke-width: 0.001;
 		}
 		path:hover,polygon:hover {
 			fill: black;
 			transition: 0.5s;
 		}"""
 
-	with open("./japan.json", "r", encoding="utf-8") as f:
+	with open("./japan.json", "r", encoding="utf-8-sig") as f:
 		geo = json.load(f)
 
-	html = html.replace("#svg", geojson2html(geo))
+	html = html.replace("#svg", geojson2html(geo, key="広島県", stroke="beizer"))
 	html = html.replace("#style", style)
 	
-	with open("./geo.html", 'w', encoding="utf-8") as f:
+	with open("./geo2.html", 'w', encoding="utf-8") as f:
 		f.write(html)
