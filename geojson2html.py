@@ -10,6 +10,43 @@ import traceback
 # 
 #======================================================================
 
+def perpendicular_distance(point, line_start, line_end):
+    # Calculate the perpendicular distance from `point` to the line defined by `line_start` and `line_end`.
+    x, y = point
+    x1, y1 = line_start
+    x2, y2 = line_end
+
+    numerator = abs((y2 - y1) * x - (x2 - x1) * y + x2 * y1 - y2 * x1)
+    denominator = ((y2 - y1) ** 2 + (x2 - x1) ** 2)**0.5
+
+    return numerator / denominator
+
+def douglas_peucker_simplify(polygon, tolerance):
+    if len(polygon) <= 2:
+        # The polygon is too small to simplify further.
+        return polygon
+
+    # Find the point with the maximum perpendicular distance
+    max_distance = 0
+    max_index = 0
+    start, end = polygon[0], polygon[-1]
+
+    for i in range(1, len(polygon) - 1):
+        distance = perpendicular_distance(polygon[i], start, end)
+        if distance > max_distance:
+            max_distance = distance
+            max_index = i
+
+    if max_distance > tolerance:
+        # If the maximum distance is greater than the tolerance, split the polygon and simplify each half
+        first_half = douglas_peucker_simplify(polygon[:max_index + 1], tolerance)
+        second_half = douglas_peucker_simplify(polygon[max_index:], tolerance)
+        # Combine the two halves into a simplified polygon
+        return first_half[:-1] + second_half
+    else:
+        # If the maximum distance is not greater than the tolerance, simply return the start and end points
+        return [start, end]
+
 class Path:
 	def __init__(self, position, viewbox):
 		self.path = position
@@ -115,6 +152,9 @@ def geojson2html(geo, key=None, stroke="line"):
 	polygonhtml = ""
 	VB = Viewbox()
 
+	if type(key) == str or key == None:
+		key = [key]
+
 	for feature in geo.get("features",[]):
 		
 		# get properties
@@ -122,31 +162,33 @@ def geojson2html(geo, key=None, stroke="line"):
 		prop_name = props.get("name", "")
 		prop_fullname = props.get("fullname",prop_name)
 
-		# skip not-specified
-		if key != None and prop_name not in key:
-			continue
+		for k in key:
+			# skip not-specified
+			if k != None and prop_name not in k:
+				continue
 
-		# get geometries
-		geo = feature.get("geometry",{})
-		geo_cors = geo.get("coordinates",[])
-		geo_dtype = geo.get("type", None)
+			# get geometries
+			geo = feature.get("geometry",{})
+			geo_cors = geo.get("coordinates",[])
+			geo_dtype = geo.get("type", None)
 
-		if geo_dtype not in ["Polygon","MultiPolygon"]:
-			print(f"Ops! {geo_dtype} can not be handled so far!")
-			continue
+			if geo_dtype not in ["Polygon","MultiPolygon"]:
+				print(f"Ops! {geo_dtype} can not be handled so far!")
+				continue
 
-		PATH = polygon2Path(geo_dtype, geo_cors, stroke)
+			PATH = polygon2Path(geo_dtype, geo_cors, stroke)
 
-		VB = updateViewbox(VB, PATH.box)
+			VB = updateViewbox(VB, PATH.box)
 
-		polygonhtml += f"<path id=\"{prop_fullname}\" d=\"{PATH.path}\"><title>{prop_fullname}</title></path>\n"
+			polygonhtml += f"<path id=\"{prop_fullname}\" d=\"{PATH.path}\"><title>{prop_fullname}</title></path>\n"
 
 	svghtml = svghtml.replace("#viewbox", " ".join(map(str, VB.shape())))
 	svghtml = svghtml.replace("#polygon", polygonhtml)
 
-	return svghtml
+	return svghtml, VB
 
 if __name__ == "__main__":
+	
 	import json
 
 	html = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Document</title></head><style>#style</style><body>#svg</body></html>"
@@ -159,18 +201,21 @@ if __name__ == "__main__":
 		}
 		path,polygon {fill: white;
 			stroke: black;
-			stroke-width: 0.001;
+			stroke-width: #stroke_width;
 		}
 		path:hover,polygon:hover {
-			fill: black;
+			fill: darkgray;
 			transition: 0.5s;
 		}"""
 
 	with open("./japan.json", "r", encoding="utf-8-sig") as f:
 		geo = json.load(f)
 
-	html = html.replace("#svg", geojson2html(geo, key="広島県", stroke="beizer"))
+	geohtml, VB = geojson2html(geo, stroke="beizer")
+
+	html = html.replace("#svg", geohtml)
 	html = html.replace("#style", style)
+	html = html.replace("#stroke_width", str((VB.pos_top - VB.pos_bottom)/1000))
 	
 	with open("./geo2.html", 'w', encoding="utf-8") as f:
 		f.write(html)
